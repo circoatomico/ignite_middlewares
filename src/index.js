@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 
-const { v4: uuidv4, validate } = require('uuid');
+const { v4: uuidv4, validate: uuidValidate } = require('uuid');
 
 const app = express();
 app.use(express.json());
@@ -10,19 +10,75 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const {username} = request.headers
+
+  const verifyUserExist = users.find(user => user.username === username)
+
+  if (verifyUserExist) {
+    request.user = verifyUserExist
+    next()
+  } else {
+    return response.status(404).json({error: "User does not exists!"})
+  }
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const {user} = request
+
+  if (user.pro == false) {
+    if (user.todos.length < 10) {
+      next()
+    } else {
+      return response.status(403).json({error: "reached limit of todos."})
+    }
+  } else {
+    next()
+  }
+
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const {username} = request.headers
+  const {id} = request.params
+
+  const validateUser = users.find(user => user.username == username)
+
+  if (validateUser == undefined) {
+    return response.status(404).json({error: "Username does not exists!"})
+  }
+
+  if (!uuidValidate(id)) {
+    return response.status(400).json({error: "Todo id not a valid uuid"})
+  }
+
+  const validateUuidExists = validateUser.todos.find(todo => todo.id == id)
+
+  if (validateUuidExists) {
+    request.user = validateUser
+    request.todo = validateUuidExists
+    next()
+  } else {
+    return response.status(404).json({error: "Todo does not exists!"})
+  }
+
+ 
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const {id} = request.params
+
+  if (!uuidValidate(id)) {
+    return response.status(404).json({error: "Not a valid UUID."})
+  }
+
+  const validateUser = users.find(user => user.id == id)
+
+  if (validateUser) {
+    request.user = validateUser
+    next()
+  } else {
+    return response.status(404).json({error: "User does not exists!"})
+  }
 }
 
 app.post('/users', (request, response) => {
